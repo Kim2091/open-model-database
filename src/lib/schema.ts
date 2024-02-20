@@ -9,7 +9,7 @@ export type SPDXLicense = string & { readonly SPDXLicense: never };
  * A SPDX license id (short).
  * @see https://spdx.org/licenses/
  */
-export type SPDXLicenseId = string & { readonly SPDXLicenseId: never };
+export type SPDXLicenseId = SPDXLicense & { readonly SPDXLicenseId: never };
 export type TagId = string & { readonly TagId: never };
 export type TagCategoryId = string & { readonly TagCategoryId: never };
 export type ArchId = string & { readonly ArchId: never };
@@ -30,6 +30,7 @@ export interface Model extends Partial<ExtraModelProperties> {
     outputChannels: number;
     resources: Resource[];
     images: Image[];
+    thumbnail?: Thumbnail;
 }
 interface ExtraModelProperties {
     trainingIterations: number;
@@ -46,16 +47,16 @@ interface ExtraModelProperties {
 export type Resource = PthFile | OnnxFile;
 
 interface SingleFile {
-    size: number | null;
-    sha256: string | null;
+    size: number;
+    sha256: string;
     urls: string[];
     platform: Platform;
 }
-interface PthFile extends SingleFile {
+export interface PthFile extends SingleFile {
     type: 'pth';
     platform: 'pytorch';
 }
-interface OnnxFile extends SingleFile {
+export interface OnnxFile extends SingleFile {
     type: 'onnx';
     platform: 'onnx';
 }
@@ -77,6 +78,24 @@ export interface StandaloneImage {
     thumbnail?: string;
 }
 
+export type Thumbnail = PairedThumbnail | StandaloneThumbnail;
+export interface PairedThumbnail {
+    type: 'paired';
+    LR: string;
+    SR: string;
+    LRSize?: ImageSize;
+    SRSize?: ImageSize;
+}
+export interface StandaloneThumbnail {
+    type: 'standalone';
+    url: string;
+}
+
+export interface ImageSize {
+    readonly width: number;
+    readonly height: number;
+}
+
 export interface User {
     name: string;
 }
@@ -85,6 +104,7 @@ export interface Tag {
     name: string;
     description: MarkDownString;
     implies?: TagId[];
+    hidden?: true;
 }
 
 export interface TagCategory {

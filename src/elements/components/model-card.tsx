@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react/display-name */
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import { LazyLoadComponent } from 'react-lazy-load-image-component';
 import { useArchitectures } from '../../lib/hooks/use-architectures';
 import { useDevicePixelRatio } from '../../lib/hooks/use-device-pixel-ratio';
@@ -8,7 +8,7 @@ import { useUpdateModel } from '../../lib/hooks/use-update-model';
 import { useUsers } from '../../lib/hooks/use-users';
 import { useWebApi } from '../../lib/hooks/use-web-api';
 import { joinList } from '../../lib/react-util';
-import { Image, Model, ModelId, PairedImage } from '../../lib/schema';
+import { ImageSize, Model, ModelId, PairedThumbnail } from '../../lib/schema';
 import { getTextDescription } from '../../lib/text-description';
 import { asArray, joinClasses } from '../../lib/util';
 import { EditableTags } from './editable-tags';
@@ -23,24 +23,20 @@ interface ModelCardProps extends BaseModelCardProps {
     lazy?: boolean;
 }
 
-interface Size {
-    readonly height: number;
-    readonly width: number;
-}
-const EMPTY_SIZE: Size = {
+const EMPTY_SIZE: ImageSize = {
     height: 0,
     width: 0,
 };
-function getNaturalSize(image: HTMLImageElement): Size {
+function getNaturalSize(image: HTMLImageElement): ImageSize {
     return {
         height: image.naturalHeight,
         width: image.naturalWidth,
     };
 }
 
-const SideBySideImage = ({ model, image }: { model: Model; image: PairedImage }) => {
-    const [lrDimensions, setLrDimensions] = useState(EMPTY_SIZE);
-    const [srDimensions, setSrDimensions] = useState(EMPTY_SIZE);
+const SideBySideImage = ({ model, image }: { model: Model; image: PairedThumbnail }) => {
+    const [lrDimensions, setLrDimensions] = useState(image.LRSize ?? EMPTY_SIZE);
+    const [srDimensions, setSrDimensions] = useState(image.SRSize ?? EMPTY_SIZE);
 
     const maxHeight = Math.max(lrDimensions.height, srDimensions.height);
     const maxWidth = Math.max(lrDimensions.width, srDimensions.width);
@@ -48,23 +44,15 @@ const SideBySideImage = ({ model, image }: { model: Model; image: PairedImage })
     const lrRef = useRef<HTMLImageElement>(null);
     const srRef = useRef<HTMLImageElement>(null);
 
-    useEffect(() => {
-        if (lrRef.current) {
-            setLrDimensions(getNaturalSize(lrRef.current));
-        }
-        if (srRef.current) {
-            setSrDimensions(getNaturalSize(srRef.current));
-        }
-    }, []);
-
     const dpr = useDevicePixelRatio();
     // The goal of this scale is to ensure that the image is rendered as an integer scale (e.g. 100%, 200%, 300%).
     // This is necessary to prevent scaling artifacts. Such artifacts are especially noticeable for 1x models.
     // Here is how the scale is calculated:
     // 1. `1/dpr` scales the image such that 1px in the image is 1px on the screen.
-    // 2. `Math.round(dpr - 0.01)` rounds the dpr to the nearest integer. Importantly, it rounds .5 down.
+    // 2. `Math.round(dpr + 0.16)` rounds the dpr to the nearest integer. Importantly, it rounds .35 up.
+    //    This guarantees that we show at most 1.35x the original image size.
     // 3. `Math.max(1, ...)` ensures that the scale is at least 1. A scale of 0 would cause the image to disappear.
-    const scale = (1 / dpr) * Math.max(1, Math.round(dpr - 0.01));
+    const scale = (1 / dpr) * Math.max(1, Math.round(dpr + 0.16));
 
     return (
         <div className="flex h-full w-full">
@@ -107,7 +95,7 @@ const SideBySideImage = ({ model, image }: { model: Model; image: PairedImage })
 };
 
 const getModelCardImageComponent = (model: Model) => {
-    const image = model.images[0] as Image | undefined;
+    const image = model.thumbnail ?? (model.images.length === 0 ? undefined : model.images[0]);
     switch (image?.type) {
         case 'paired': {
             return (
@@ -118,7 +106,7 @@ const getModelCardImageComponent = (model: Model) => {
             );
         }
         case 'standalone': {
-            const imageSrc = image.thumbnail || image.url;
+            const imageSrc = image.url;
             return (
                 <img
                     alt={model.name}

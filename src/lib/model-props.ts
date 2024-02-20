@@ -168,7 +168,7 @@ export const MODEL_PROPS: Readonly<Record<keyof Model, ModelProp>> = {
         name: 'Tags',
         type: 'array',
         of: { type: 'string', kind: 'tag-id' },
-        allowEmpty: true,
+        allowEmpty: false,
     },
     description: {
         name: 'Description',
@@ -229,14 +229,12 @@ export const MODEL_PROPS: Readonly<Record<keyof Model, ModelProp>> = {
                 },
                 size: {
                     name: 'Size',
-                    optional: true,
                     type: 'number',
                     isInteger: true,
                     min: 1,
                 },
                 sha256: {
                     name: 'SHA256',
-                    optional: true,
                     type: 'string',
                     format: /^[0-9a-f]{64}$/i,
                 },
@@ -315,5 +313,10 @@ export const MODEL_PROPS: Readonly<Record<keyof Model, ModelProp>> = {
         type: 'array',
         of: { type: 'unknown' },
         allowEmpty: true,
+    },
+    thumbnail: {
+        optional: true,
+        name: 'Thumbnail',
+        type: 'unknown',
     },
 };
